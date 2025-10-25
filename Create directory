@@ -1,0 +1,3 @@
+sudo mkdir /opt/openvpn-as
+sudo mkdir /opt/openvpn-as/ovpn_files
+sudo mkdir /opt/openvpn-as/ovpn_files/client_files
