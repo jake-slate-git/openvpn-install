@@ -18,7 +18,7 @@ ip link add dummy0 type dummy || true
 ip link add name br0 type bridge || true
 
 # Configure the bridge IP and bring interfaces up
-ip addr add 10.8.0.1/24 dev br0
+ip addr add 191.168.98.1/24 dev br0
 ip link set dummy0 master br0
 ip link set dummy0 up
 ip link set br0 up
@@ -33,7 +33,7 @@ echo "Backup created at $CONFIG_FILE.bak-$(date +%F)"
 sed -i \
     -e 's/^[[:space:]]*dev tun/dev tap/' \
     -e 's/^[[:space:]]*topology subnet/#topology subnet/' \
-    -e 's/^[[:space:]]*server 10.8.0.0 255.255.255.0/server-bridge 10.8.0.1 255.255.255.0 10.8.0.5 10.8.0.100/' \
+    -e 's/^[[:space:]]*server 10.8.0.1.1 255.255.255.0/server-bridge 192.168.98.1 255.255.255.0 192.168.98.5 192.168.98.100/' \
     "$CONFIG_FILE"
 
 echo "--- 4. Appending bridge-up/down scripts to config ---"
