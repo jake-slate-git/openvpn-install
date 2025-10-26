@@ -33,7 +33,7 @@ echo "Backup created at $CONFIG_FILE.bak-$(date +%F)"
 sed -i \
     -e 's/^[[:space:]]*dev tun/dev tap/' \
     -e 's/^[[:space:]]*topology subnet/#topology subnet/' \
-    -e 's/^[[:space:]]*server 10.8.0.0 255.255.255.0/server-bridge 10.8.0.1 255.255.255.0 10.8.0.5 10.8.0.100/>
+    -e 's/^[[:space:]]*server 10.8.0.0 255.255.255.0/server-bridge 10.8.0.1 255.255.255.0 10.8.0.5 10.8.0.100/' \
     "$CONFIG_FILE"
 
 echo "--- 4. Appending bridge-up/down scripts to config ---"
