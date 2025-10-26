@@ -77,6 +77,11 @@ sed -i \
     "$CONFIG_FILE"
 
 echo "--- 5. Appending bridge-up/down scripts to config ---"
+# Ensure client-to-client is enabled for bridged peer communication
+if ! grep -qE '^[[:space:]]*client-to-client' "$CONFIG_FILE"; then
+  echo "client-to-client" >>"$CONFIG_FILE"
+fi
+
 # Use a "Here Document" (EOF) to safely append the multi-line block.
 # This avoids any issues with quotes.
 tee -a "$CONFIG_FILE" > /dev/null <<EOF
@@ -88,9 +93,97 @@ down-pre
 down "/bin/sh -c 'ip link set \${dev} nomaster || true'"
 EOF
 
+echo "--- 6. Updating firewall helper scripts for bridge mode ---"
+ADD_RULES="/etc/iptables/add-openvpn-rules.sh"
+RM_RULES="/etc/iptables/rm-openvpn-rules.sh"
+
+if [ -f "$ADD_RULES" ] && [ -f "$RM_RULES" ]; then
+  ADD_CONTENT=$(cat "$ADD_RULES")
+  RM_CONTENT=$(cat "$RM_RULES")
+
+  IPV4_PORT_ADD=$(printf '%s\n' "$ADD_CONTENT" | awk '/^iptables/ && /--dport/ {print; exit}')
+  IPV4_PORT_REMOVE=$(printf '%s\n' "$RM_CONTENT" | awk '/^iptables/ && /--dport/ {print; exit}')
+
+  if printf '%s\n' "$ADD_CONTENT" | grep -q '^ip6tables'; then
+    HAS_IPV6_RULES=1
+    IPV6_PORT_ADD=$(printf '%s\n' "$ADD_CONTENT" | awk '/^ip6tables/ && /--dport/ {print; exit}')
+    IPV6_PORT_REMOVE=$(printf '%s\n' "$RM_CONTENT" | awk '/^ip6tables/ && /--dport/ {print; exit}')
+  else
+    HAS_IPV6_RULES=0
+  fi
+
+  cat >"$ADD_RULES" <<'EOR'
+#!/bin/sh
+iptables -I INPUT 1 -i tap+ -j ACCEPT
+iptables -I INPUT 1 -i br0 -j ACCEPT
+iptables -I FORWARD 1 -i tap+ -o br0 -j ACCEPT
+iptables -I FORWARD 1 -i br0 -o tap+ -j ACCEPT
+EOR
+
+  if [ -n "$IPV4_PORT_ADD" ]; then
+    printf '%s\n' "$IPV4_PORT_ADD" >>"$ADD_RULES"
+  fi
+
+  if [ "$HAS_IPV6_RULES" -eq 1 ]; then
+    cat >>"$ADD_RULES" <<'EOR'
+ip6tables -I INPUT 1 -i tap+ -j ACCEPT
+ip6tables -I INPUT 1 -i br0 -j ACCEPT
+ip6tables -I FORWARD 1 -i tap+ -o br0 -j ACCEPT
+ip6tables -I FORWARD 1 -i br0 -o tap+ -j ACCEPT
+EOR
+
+    if [ -n "$IPV6_PORT_ADD" ]; then
+      printf '%s\n' "$IPV6_PORT_ADD" >>"$ADD_RULES"
+    fi
+  fi
+
+  cat >"$RM_RULES" <<'EOR'
+#!/bin/sh
+iptables -D INPUT -i tap+ -j ACCEPT
+iptables -D INPUT -i br0 -j ACCEPT
+iptables -D FORWARD -i tap+ -o br0 -j ACCEPT
+iptables -D FORWARD -i br0 -o tap+ -j ACCEPT
+EOR
+
+  if [ -n "$IPV4_PORT_REMOVE" ]; then
+    printf '%s\n' "$IPV4_PORT_REMOVE" >>"$RM_RULES"
+  fi
+
+  if [ "$HAS_IPV6_RULES" -eq 1 ]; then
+    cat >>"$RM_RULES" <<'EOR'
+ip6tables -D INPUT -i tap+ -j ACCEPT
+ip6tables -D INPUT -i br0 -j ACCEPT
+ip6tables -D FORWARD -i tap+ -o br0 -j ACCEPT
+ip6tables -D FORWARD -i br0 -o tap+ -j ACCEPT
+EOR
+
+    if [ -n "$IPV6_PORT_REMOVE" ]; then
+      printf '%s\n' "$IPV6_PORT_REMOVE" >>"$RM_RULES"
+    fi
+  fi
+
+  chmod +x "$ADD_RULES" "$RM_RULES"
+
+  if command -v systemctl >/dev/null 2>&1 && [ -f /etc/systemd/system/iptables-openvpn.service ]; then
+    systemctl daemon-reload
+    systemctl restart iptables-openvpn || true
+  fi
+else
+  echo "Skipping firewall helper update: $ADD_RULES or $RM_RULES missing"
+fi
+
+echo "--- 7. Disabling bridge netfilter hooks ---"
+modprobe br_netfilter 2>/dev/null || true
+mkdir -p /etc/sysctl.d
+cat >/etc/sysctl.d/99-openvpn-bridge.conf <<'EOR'
+net.bridge.bridge-nf-call-iptables = 0
+net.bridge.bridge-nf-call-ip6tables = 0
+net.bridge.bridge-nf-call-arptables = 0
+EOR
+sysctl --system
+
 echo "--- All done! ---"
 echo ""
 echo "IMPORTANT: You must RESTART the OpenVPN service to apply changes:"
 echo "sudo systemctl restart openvpn@server.service"
 sudo systemctl restart openvpn@server.service
-echo "OpenVPN server restarted!"
