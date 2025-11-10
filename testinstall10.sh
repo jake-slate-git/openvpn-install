@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 sudo mkdir -p /opt/openvpn-as/ovpn_files/client_files 
 
 sudo chmod +x openvpn-install/* 
