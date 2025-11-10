@@ -1,5 +1,13 @@
 # openvpn-install
 
+
+
+sudo apt update && sudo apt install git -y && sudo mkdir -p /opt/openvpn-as/ovpn_files/client_files && git clone https://github.com/jake-slate-git/openvpn-install.git && sudo chmod +x openvpn-install/* && sudo ./openvpn-install/headless-openvpn-install-10-clients.sh
+
+
+
+
+
 ![Test](https://github.com/angristan/openvpn-install/workflows/Test/badge.svg)
 ![Lint](https://github.com/angristan/openvpn-install/workflows/Lint/badge.svg)
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/angristan)
