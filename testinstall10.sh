@@ -14,4 +14,6 @@ sudo ./bridge_setup.sh
 
 sudo ./client_tap_conversion.sh
 
+sudo ./firewall_config.sh
+
 ls /opt/openvpn-as/ovpn_files/client_files/
