@@ -187,5 +187,8 @@ echo ""
 echo "IMPORTANT: You must RESTART the OpenVPN service to apply changes:"
 echo "sudo systemctl restart openvpn@server.service"
 
+echo "Comment out tls-crypt tls-crypt.key"
+sudo sed -i 's/^[[:space:]]*tls-crypt[[:space:]]\+tls-crypt\.key/# &/' /etc/openvpn/server.conf
+
 sudo systemctl restart openvpn@server.service
 echo "server restarted!"
