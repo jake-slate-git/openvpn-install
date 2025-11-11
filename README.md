@@ -1,8 +1,9 @@
 # openvpn-install
 
-
-
 sudo apt update && sudo apt install git -y && sudo mkdir -p /opt/openvpn-as/ovpn_files/client_files && git clone https://github.com/jake-slate-git/openvpn-install.git && sudo chmod +x openvpn-install/* && cd openvpn-install && sudo ./testinstall10.sh
+
+
+
 
 
 
