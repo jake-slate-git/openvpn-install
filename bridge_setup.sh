@@ -186,4 +186,6 @@ echo "--- All done! ---"
 echo ""
 echo "IMPORTANT: You must RESTART the OpenVPN service to apply changes:"
 echo "sudo systemctl restart openvpn@server.service"
+
 sudo systemctl restart openvpn@server.service
+echo "server restarted!"
