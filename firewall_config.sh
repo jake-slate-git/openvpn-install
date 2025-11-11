@@ -1,30 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-sudo apt install ufw -y
+stamp() { date +"%Y%m%d_%H%M%S"; }
 
-echo "[+] Disabling IPv6 in UFW"
-sudo sed -i 's/IPV6=.*/IPV6=no/g' /etc/ufw/ufw.conf
+echo "[+] Ensure UFW is installed"
+sudo apt-get update -y
+sudo apt-get install -y ufw
 
-echo "[+] Resetting UFW"
+echo "[+] Disable IPv6 in UFW (your host has no IPv6)"
+sudo sed -ri 's/^IPV6=.*/IPV6=no/' /etc/ufw/ufw.conf || true
+
+echo "[+] Reset UFW to a clean state (backups kept)"
+sudo cp -a /etc/ufw/user.rules      /etc/ufw/user.rules.$(stamp)      2>/dev/null || true
+sudo cp -a /etc/ufw/before.rules    /etc/ufw/before.rules.$(stamp)    2>/dev/null || true
+sudo cp -a /etc/ufw/after.rules     /etc/ufw/after.rules.$(stamp)     2>/dev/null || true
+sudo cp -a /etc/ufw/user6.rules     /etc/ufw/user6.rules.$(stamp)     2>/dev/null || true
+sudo cp -a /etc/ufw/before6.rules   /etc/ufw/before6.rules.$(stamp)   2>/dev/null || true
+sudo cp -a /etc/ufw/after6.rules    /etc/ufw/after6.rules.$(stamp)    2>/dev/null || true
 sudo ufw --force reset
 
-echo "[+] Setting default policies"
+echo "[+] Set sane defaults"
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
-echo "[+] Allowing SSH (rate-limited)"
-sudo ufw limit 22/tcp comment "Allow and rate-limit SSH"
+echo "[+] Allow SSH (rate-limited)"
+# If your SSH port is nonstandard, replace 22/tcp with that port
+sudo ufw limit 22/tcp comment 'SSH (rate-limited)'
 
-echo "[+] Allowing OpenVPN UDP 1194"
-sudo ufw allow 1194/udp comment "OpenVPN Server"
+echo "[+] Allow OpenVPN server port (UDP/1194)"
+sudo ufw allow 1194/udp comment 'OpenVPN server'
 
-echo "[+] Allowing ICMP"
-sudo ufw allow proto icmp comment "Allow ICMP for ping and path MTU"
+echo "[+] Allow ICMP (ping) in both directions"
+sudo ufw allow in  proto icmp from any to any comment 'ICMP inbound'
+sudo ufw allow out proto icmp from any to any comment 'ICMP outbound'
 
-echo "[+] Enabling UFW firewall"
+echo "[+] Enable and show status"
 sudo ufw --force enable
 sudo ufw reload
+sudo ufw status verbose
+
 
 echo "[+] Installing fail2ban"
 sudo apt update -y
