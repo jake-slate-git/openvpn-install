@@ -12,4 +12,6 @@ sudo ./TLS_client_removal.sh
 
 sudo ./bridge_setup.sh
 
+sudo ./client_tap_conversion.sh
+
 ls /opt/openvpn-as/ovpn_files/client_files/
